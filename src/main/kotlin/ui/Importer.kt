@@ -31,6 +31,7 @@ import react.css.css
 import react.dom.html.ReactHTML.div
 import react.useState
 import ui.common.DialogErrorState
+import ui.common.ProgressProps
 import ui.common.errorDialog
 import ui.common.messageBar
 import ui.common.progress
@@ -46,18 +47,34 @@ import util.toList
 import util.waitFileSelection
 
 val Importer = scopedFC<ImporterProps> { props, scope ->
-    var isLoading by useState(false)
+    var loadingProgress by useState(ProgressProps.Initial)
     var params by useState { loadImportParamsFromCookies() ?: ImportParams() }
     var snackbarError by useState(SnackbarErrorState())
     var dialogError by useState(DialogErrorState())
 
-    fun checkFilesToImport(files: List<File>) {
-        val fileFormat = getFileFormat(files, props)
+    suspend fun checkFilesToImport(files: List<File>, multipleMode: Boolean) {
+        val onError = { t: Throwable ->
+            console.log(t)
+            if (t is UnsupportedFileFormatError) {
+                snackbarError = SnackbarErrorState(true, t.message)
+            } else {
+                dialogError = DialogErrorState(
+                    isShowing = true,
+                    title = string(Strings.ImportErrorDialogTitle),
+                    message = t.stackTraceToString(),
+                )
+            }
+        }
+
+        val fileFormat = runCatchingCancellable { getFileFormat(files, props) }
+            .onFailure(onError)
+            .getOrElse { return }
+
         when {
             fileFormat == null -> {
                 snackbarError = SnackbarErrorState(true, string(Strings.UnsupportedFileTypeImportError))
             }
-            !fileFormat.multipleFile && files.count() > 1 -> {
+            !fileFormat.multipleFile && !multipleMode && files.count() > 1 -> {
                 snackbarError = SnackbarErrorState(
                     true,
                     string(Strings.MultipleFileImportError, "format" to fileFormat.name),
@@ -67,9 +84,8 @@ val Importer = scopedFC<ImporterProps> { props, scope ->
                 scope,
                 files,
                 fileFormat,
-                setLoading = { isLoading = it },
-                onSnackBarError = { snackbarError = it },
-                onDialogError = { dialogError = it },
+                setProgress = { loadingProgress = it },
+                onError,
                 props,
                 params,
             )
@@ -94,10 +110,10 @@ val Importer = scopedFC<ImporterProps> { props, scope ->
             scope.launch {
                 val accept = props.formats.joinToString(",") { it.extension }
                 val files = waitFileSelection(accept = accept, multiple = true)
-                checkFilesToImport(files)
+                checkFilesToImport(files, params.multipleMode)
             }
         }
-        buildFileDrop { checkFilesToImport(it) }
+        buildFileDrop(scope) { checkFilesToImport(it, params.multipleMode) }
     }
 
     buildConfigurations(params) { params = it }
@@ -110,19 +126,17 @@ val Importer = scopedFC<ImporterProps> { props, scope ->
     )
 
     errorDialog(
-        isShowing = dialogError.isShowing,
-        title = dialogError.title,
-        errorMessage = dialogError.message,
+        state = dialogError,
         close = { closeErrorDialog() },
     )
 
-    progress(isShowing = isLoading)
+    progress(loadingProgress)
 }
 
-private fun ChildrenBuilder.buildFileDrop(onFiles: (List<File>) -> Unit) {
+private fun ChildrenBuilder.buildFileDrop(scope: CoroutineScope, onFiles: suspend (List<File>) -> Unit) {
     FileDrop {
         onDrop = { files, _ ->
-            onFiles(files.toList())
+            scope.launch { onFiles(files.toList()) }
         }
         Typography {
             variant = TypographyVariant.h5
@@ -142,6 +156,7 @@ private fun ChildrenBuilder.buildFileDrop(onFiles: (List<File>) -> Unit) {
 
 private fun ChildrenBuilder.buildConfigurations(params: ImportParams, onNewParams: (ImportParams) -> Unit) {
     FormGroup {
+        row = true
         div {
             FormControlLabel {
                 label = ReactNode(string(Strings.UseSimpleImport))
@@ -167,6 +182,32 @@ private fun ChildrenBuilder.buildConfigurations(params: ImportParams, onNewParam
                 }
             }
         }
+        div {
+            css { marginLeft = 48.px }
+            FormControlLabel {
+                label = ReactNode(string(Strings.UseMultipleMode))
+                control = Switch.create {
+                    color = SwitchColor.secondary
+                    checked = params.multipleMode
+                    onChange = { event, _ ->
+                        val checked = event.target.checked
+                        onNewParams(params.copy(multipleMode = checked))
+                    }
+                }
+                labelPlacement = LabelPlacement.end
+            }
+            Tooltip {
+                title = ReactNode(string(Strings.UseMultipleModeDescription))
+                placement = TooltipPlacement.right
+                disableInteractive = false
+
+                HelpOutline {
+                    style = jso {
+                        verticalAlign = VerticalAlign.middle
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -174,45 +215,47 @@ private fun import(
     scope: CoroutineScope,
     files: List<File>,
     format: Format,
-    setLoading: (Boolean) -> Unit,
-    onSnackBarError: (SnackbarErrorState) -> Unit,
-    onDialogError: (DialogErrorState) -> Unit,
+    setProgress: (ProgressProps) -> Unit,
+    onError: (Throwable) -> Unit,
     props: ImporterProps,
     params: ImportParams,
 ) {
-    setLoading(true)
     scope.launch {
         runCatchingCancellable {
             delay(100)
             val parseFunction = format.parser
-            val project = parseFunction(files, params).lyricsTypeAnalysed().requireValid()
-            console.log("Project was imported successfully.")
-            console.log(project)
-            saveImportParamsToCookies(params)
-            props.onImported.invoke(project)
-        }.onFailure { t ->
-            console.log(t)
-            setLoading(false)
-            if (t is UnsupportedFileFormatError) {
-                onSnackBarError(SnackbarErrorState(true, t.message))
+            val projects = if (params.multipleMode) {
+                val total = files.count()
+                console.log("Importing $total files...")
+                val projects = files.mapIndexed { index, file ->
+                    setProgress(ProgressProps(isShowing = true, total = total, current = index + 1))
+                    val project = parseFunction(listOf(file), params).lyricsTypeAnalysed().requireValid()
+                    console.log("Imported ${index + 1} of $total files")
+                    project
+                }
+                console.log("A batch of $total projects are imported successfully.")
+                projects
             } else {
-                onDialogError(
-                    DialogErrorState(
-                        isShowing = true,
-                        title = string(Strings.ImportErrorDialogTitle),
-                        message = t.stackTraceToString(),
-                    ),
-                )
+                setProgress(ProgressProps(isShowing = true))
+                val project = parseFunction(files, params).lyricsTypeAnalysed().requireValid()
+                console.log("Project is imported successfully.")
+                console.log(project)
+                listOf(project)
             }
+            saveImportParamsToCookies(params)
+            props.onImported.invoke(projects)
+        }.onFailure { t ->
+            onError(t)
+            setProgress(ProgressProps.Initial)
         }
     }
 }
 
-private fun getFileFormat(files: List<File>, props: ImporterProps): Format? {
+private suspend fun getFileFormat(files: List<File>, props: ImporterProps): Format? {
     val extensions = files.map { it.extensionName }.distinct()
+    if (extensions.count() > 1) return null
 
-    return if (extensions.count() > 1) null
-    else props.formats.find { it.allExtensions.contains(".${extensions.first()}") }
+    return props.formats.find { it.match(files) }
 }
 
 private fun loadImportParamsFromCookies() = Cookies.get(ImportParamsCookieName)
@@ -226,7 +269,7 @@ private const val ImportParamsCookieName = "import_params"
 
 external interface ImporterProps : Props {
     var formats: List<Format>
-    var onImported: (Project) -> Unit
+    var onImported: (List<Project>) -> Unit
 }
 
 data class SnackbarErrorState(

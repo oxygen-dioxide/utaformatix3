@@ -11,6 +11,7 @@ import model.Format.Dv
 import model.Format.MusicXml
 import model.Format.Ppsf
 import model.Format.S5p
+import model.Format.StandardMid
 import model.Format.Svp
 import model.Format.UfData
 import model.Format.Ust
@@ -47,17 +48,32 @@ val OutputFormatSelector = FC<OutputFormatSelectorProps> { props ->
     buildFormatList(props)
 }
 
+private const val MAX_WARNINGS = 20
+
 private fun ChildrenBuilder.buildImportWarnings(props: OutputFormatSelectorProps) {
-    val importWarnings = props.project.importWarnings
+    val importWarnings = props.projects.flatMap { project: Project ->
+        project.importWarnings.map { project.inputFiles[0].name to it }
+    }
     if (importWarnings.isEmpty()) return
+    val multipleMode = props.projects.size > 1
 
     Alert {
         severity = AlertColor.warning
         AlertTitle { +string(Strings.ImportWarningTitle) }
-        importWarnings.map { it.text }
+        importWarnings.take(MAX_WARNINGS).map {
+            if (multipleMode) {
+                val (fileName, warning) = it
+                "($fileName) ${warning.text}"
+            } else {
+                it.second.text
+            }
+        }
             .forEach {
                 div { +it }
             }
+        if (importWarnings.size > MAX_WARNINGS) {
+            div { +"..." }
+        }
     }
 }
 
@@ -87,7 +103,7 @@ private fun ChildrenBuilder.buildFormatList(props: OutputFormatSelectorProps) {
                                 variant = TypographyVariant.h4
                                 style = jso { fontWeight = FontWeight.lighter }
 
-                                +format.name.replace("_", " ")
+                                +format.displayName
                             }
                             secondary = ReactNode(format.description.orEmpty())
                         }
@@ -117,6 +133,10 @@ private val ImportWarning.text: String
         is ImportWarning.TempoIgnoredInPreMeasure -> string(
             Strings.ImportWarningTempoIgnoredInPreMeasure,
             "bpm" to tempo.bpm.toString(),
+        )
+        is ImportWarning.DefaultTempoFixed -> string(
+            Strings.ImportWarningDefaultTempoFixed,
+            "bpm" to originalBpm.toString(),
         )
         is ImportWarning.TimeSignatureNotFound -> string(Strings.ImportWarningTimeSignatureNotFound)
         is ImportWarning.TimeSignatureIgnoredInTrack -> string(
@@ -151,6 +171,7 @@ private val Format.description: String?
         Dv -> Strings.DvFormatDescription
         Vsq -> Strings.VsqFormatDescription
         Ppsf -> null
+        StandardMid -> Strings.StandardMidDescription
         UfData -> Strings.UfDataFormatDescription
     }?.let { string(it) }
 
@@ -168,11 +189,12 @@ private val Format.iconPath: String?
         Dv -> Resources.dvIcon
         Vsq -> Resources.vsqIcon
         Ppsf -> null
+        StandardMid -> Resources.standardMidiIcon
         UfData -> Resources.ufdataIcon
     }
 
 external interface OutputFormatSelectorProps : Props {
-    var project: Project
+    var projects: List<Project>
     var formats: List<Format>
     var onSelected: (Format) -> Unit
 }

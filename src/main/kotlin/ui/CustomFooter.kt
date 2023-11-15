@@ -21,7 +21,7 @@ val CustomFooter = FC<CustomFooterProps> { props ->
             css {
                 color = NamedColor.grey
             }
-            +"UtaFormatix © 2015 - 2022　|　"
+            +"UtaFormatix © 2015 - 2023　|　"
             Link {
                 color = NamedColor.grey
                 underline = LinkUnderline.hover
@@ -43,6 +43,13 @@ val CustomFooter = FC<CustomFooterProps> { props ->
                 underline = LinkUnderline.hover
                 onClick = { props.onOpenEmbeddedPage(Strings.ReleaseNotesUrl) }
                 +"Release Notes"
+            }
+            +"　|　"
+            Link {
+                color = NamedColor.grey
+                underline = LinkUnderline.hover
+                onClick = { props.onOpenEmbeddedPage(Strings.GoogleAnalyticsUsageInfoUrl) }
+                +"About Usage of Google Analytics"
             }
         }
     }

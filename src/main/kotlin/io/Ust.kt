@@ -66,6 +66,15 @@ object Ust {
         }
         val warnings = mutableListOf<ImportWarning>()
         val tempos = results.firstOrNull { it.tempos.isNotEmpty() }?.tempos
+            ?.let {
+                // fix extremely large tempo
+                if (it.first().tickPosition == 0L && it.first().bpm > MAX_ACCEPTED_BPM) {
+                    warnings.add(ImportWarning.DefaultTempoFixed(it.first().bpm))
+                    listOf(Tempo.default) + it.drop(1)
+                } else {
+                    it
+                }
+            }
             ?: listOf(Tempo.default).also {
                 warnings.add(ImportWarning.TempoNotFound)
             }
@@ -76,7 +85,7 @@ object Ust {
             },
         )
         return Project(
-            format = Format.Ust,
+            format = format,
             inputFiles = files,
             name = projectName,
             tracks = tracks,
@@ -103,7 +112,10 @@ object Ust {
         val notes = mutableListOf<Note>()
         val notePitchDataListMode1 = mutableListOf<UtauMode1NotePitchData>()
         val notePitchDataListMode2 = mutableListOf<UtauMode2NotePitchData>()
-        val tempos = mutableListOf<Tempo>()
+        val tempos = mutableMapOf<Long, Double>()
+
+        fun getCurrentTempo() = tempos.toList().maxByOrNull { it.first }?.second ?: Tempo.default.bpm
+
         var isHeader = true
         var time = 0L
         var pendingNoteKey: Int? = null
@@ -128,11 +140,11 @@ object Ust {
                 // Some locales use ',' instead of '.' for tempo
                 val bpm = it.replace(',', '.').toDoubleOrNull() ?: return@let
                 if (isHeader) {
-                    tempos.add(Tempo(0, bpm))
+                    tempos[0] = bpm
                 } else {
                     val tick = pendingNoteTickOn
                     if (tick != null) {
-                        tempos.add(Tempo(tick, bpm))
+                        tempos[tick] = bpm
                     } else {
                         pendingBpm = bpm
                     }
@@ -161,13 +173,13 @@ object Ust {
                     )
                     notePitchDataListMode2.add(
                         UtauMode2NotePitchData(
-                            bpm = tempos.last().bpm,
+                            bpm = getCurrentTempo(),
                             start = pendingPBS?.first,
                             startShift = pendingPBS?.second,
                             widths = pendingPBW.orEmpty(),
                             shifts = pendingPBY.orEmpty(),
                             curveTypes = pendingPBM.orEmpty(),
-                            vibratoParams = pendingVBR?.takeIf { it.isNotEmpty() }?.let {
+                            vibratoParams = pendingVBR?.takeIf { it.size > 1 }?.let {
                                 // length(%), period(milliSec), depth(cent), easeIn(%), easeOut(%), phase(%), shift(%)
                                 UtauNoteVibratoParams(
                                     length = it[0],
@@ -202,7 +214,7 @@ object Ust {
                 val length = it.toDoubleOrNull()?.roundToLong() ?: return@let
                 pendingNoteTickOn = time
                 pendingBpm?.let { bpm ->
-                    tempos.add(Tempo(time, bpm))
+                    tempos[time] = bpm
                     pendingBpm = null
                 }
                 time += length
@@ -258,9 +270,12 @@ object Ust {
                 }
             }
         }
+        val tempoList = tempos
+            .map { (tick, bpm) -> Tempo(tick, bpm) }
+            .sortedBy { it.tickPosition }
         val pitchDataMode1 = notePitchDataListMode1.ifEmpty { null }?.let { UtauMode1TrackPitchData(it) }
         val pitchDataMode2 = notePitchDataListMode2.ifEmpty { null }?.let { UtauMode2TrackPitchData(it) }
-        return FileParseResult(file, projectName, notes, tempos, isMode2, pitchDataMode1, pitchDataMode2)
+        return FileParseResult(file, projectName, notes, tempoList, isMode2, pitchDataMode1, pitchDataMode2)
     }
 
     private fun parseMode1PitchData(
@@ -287,7 +302,7 @@ object Ust {
             val content = generateTrackContent(project, track, features)
             val contentEncodedArray = content.encode("SJIS")
             val trackNameUrlSafe = getSafeFileName(track.name)
-            val trackFileName = "${project.name}_${track.id + 1}_$trackNameUrlSafe${Format.Ust.extension}"
+            val trackFileName = "${project.name}_${track.id + 1}_$trackNameUrlSafe.${format.extension}"
             zip.file(trackFileName, Uint8Array(contentEncodedArray))
         }
         val option = JsZipOption().also { it.type = "blob" }
@@ -424,5 +439,7 @@ object Ust {
 
     const val MODE1_PITCH_SAMPLING_INTERVAL_TICK = 5L
     const val MODE2_PITCH_MAX_POINT_COUNT = 50L
+    private const val MAX_ACCEPTED_BPM = 10000.0
     private const val LINE_SEPARATOR = "\r\n"
+    private val format = Format.Ust
 }

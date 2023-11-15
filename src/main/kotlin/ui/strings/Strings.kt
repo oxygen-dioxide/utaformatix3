@@ -127,6 +127,13 @@ enum class Strings(
         ru = "Целевой тип текстов",
         fr = "Type de paroles cible",
     ),
+    ChinesePinyinConversion(
+        en = "Convert lyrics in Chinese characters to Pinyin",
+        ja = "中国語歌詞（漢字）を Pinyin に変換",
+        zhCN = "将中文汉字歌词转换为拼音",
+        ru = "Преобразовать тексты на китайском языке в пиньинь",
+        fr = "Convertir les paroles en caractères chinois en pinyin",
+    ),
     LyricsReplacement(
         en = "Replace lyrics",
         ja = "歌詞を置き換える",
@@ -264,6 +271,48 @@ enum class Strings(
         ru = "До",
         fr = "À",
     ),
+    LyricsMapping(
+        en = "Map lyrics to lyrics or phonemes",
+        ja = "歌詞を歌詞または発音記号にマッピング",
+        zhCN = "将歌词映射到歌词或音素",
+        ru = "Отобразить тексты на тексты или фонемы",
+        fr = "Mapper les paroles sur les paroles ou les phonèmes",
+    ),
+    LyricsMappingDescription(
+        en = "Only lyrics that is completely same as the key will be mapped. ",
+        ja = "キーと完全一致する歌詞のみマッピングされます。",
+        zhCN = "只有与键完全相同的歌词才会被映射。",
+        ru = "Будут отображены только тексты, полностью совпадающие с ключом.",
+        fr = "Seules les paroles qui sont complètement identiques à la clé seront mappées.",
+    ),
+    LyricsMappingPreset(
+        en = "Preset",
+        ja = "プリセット",
+        zhCN = "预设",
+        ru = "Пресет",
+        fr = "Préréglage",
+    ),
+    LyricsMappingPresetClear(
+        en = "Clear",
+        ja = "クリア",
+        zhCN = "清空",
+        ru = "Очистить",
+        fr = "Effacer",
+    ),
+    LyricsMappingToPhonemes(
+        en = "Write as phonemes instead",
+        ja = "発音記号として書き出す",
+        zhCN = "写入到音素",
+        ru = "Записать вместо фонем",
+        fr = "Écrire comme phonèmes",
+    ),
+    LyricsMappingMapPlaceholder(
+        en = "Write a mapping entry per line in the format of \"{from}={to}\".",
+        ja = "「{from}={to}」の形式で、一行に一つのマッピングエントリーを書き込んでください。",
+        zhCN = "请按照“{from}={to}”的格式，每行写入一个映射条目。",
+        ru = "Запишите запись отображения на строку в формате \"{from}={to}\".",
+        fr = "Écrivez une entrée de mappage par ligne au format \"{from}={to}\".",
+    ),
     ConvertPitchData(
         en = "Convert pitch parameters",
         ja = "ピッチパラメータを変換",
@@ -344,15 +393,15 @@ enum class Strings(
         fr = "Déposer les fichiers ou Cliquer ici pour importer",
     ),
     ImportFileSubDescription(
-        en = "Supported file types: VSQX, VPR, VSQ, MID(VOCALOID), USTs," +
+        en = "Supported file types: VSQX, VPR, VSQ, MID, USTs," +
             " USTX, CCS, MUSICXML, XML, SVP, S5P, DV, PPSF(NT), UFDATA",
-        ja = "サポートされているファイル形式：VSQX、VPR、VSQ、MID（VOCALOID）、UST（複数可）、" +
+        ja = "サポートされているファイル形式：VSQX、VPR、VSQ、MID、UST（複数可）、" +
             "USTX、CCS、MUSICXML、XML、SVP、S5P、DV、PPSF（NT）、UFDATA",
-        zhCN = "支持的文件类型：VSQX、VPR、VSQ、MID（VOCALOID）、UST（允许复数个）、" +
+        zhCN = "支持的文件类型：VSQX、VPR、VSQ、MID、UST（允许复数个）、" +
             "USTX、CCS、MUSICXML、XML、SVP、S5P、DV、PPSF（NT）、UFDATA",
-        ru = "Поддерживаемые форматы файлов: VSQx, VPR, VSQ, MID (VOCALOID), UST," +
+        ru = "Поддерживаемые форматы файлов: VSQx, VPR, VSQ, MID, UST," +
             " USTX, CCS, MusicXML, XML, SVP, S5P, DV, PPSF(NT), UFDATA",
-        fr = "Types de fichiers pris en charge : VSQX, VPR, VSQ, MID(VOCALOID), USTs," +
+        fr = "Types de fichiers pris en charge : VSQX, VPR, VSQ, MID, USTs," +
             " USTX, CCS, MUSICXML, XML, SVP, S5P, DV, PPSF(NT), UFDATA",
     ),
     UnsupportedFileTypeImportError(
@@ -361,13 +410,6 @@ enum class Strings(
         zhCN = "不支持的文件类型",
         ru = "Неподдерживаемый формат файла",
         fr = "Type de fichier non supporté",
-    ),
-    UnsupportedStandardMidiError(
-        en = "Standard MIDI file format is not supported",
-        ja = "Standard MIDIファイル形式はサポートされていません",
-        zhCN = "不支持标准MIDI文件格式",
-        ru = "Стандартный формат MIDI-файла не поддерживается",
-        fr = "Le format de fichier MIDI standard n'est pas pris en charge",
     ),
     UnsupportedLegacyPpsfError(
         en = "Legacy ppsf file format is not supported (only ppsf for Piapro Studio NT is supported)",
@@ -430,6 +472,11 @@ enum class Strings(
         ru = "https://gist.githubusercontent.com/sdercolin/512db280480072f22cf1d462401eb1a0/raw",
         fr = "https://gist.githubusercontent.com/sdercolin/512db280480072f22cf1d462401eb1a0/raw",
     ),
+    GoogleAnalyticsUsageInfoUrl(
+        en = "https://gist.githubusercontent.com/sdercolin/b5d4cf81434ea381d8836e0015681029/raw",
+        ja = "https://gist.githubusercontent.com/sdercolin/b5d4cf81434ea381d8836e0015681029/raw",
+        zhCN = "https://gist.githubusercontent.com/sdercolin/b5d4cf81434ea381d8836e0015681029/raw",
+    ),
     ImportWarningTitle(
         en = "The following exceptions happened during the import process.",
         ja = "インポート中に下記の例外が発生しました。",
@@ -464,6 +511,13 @@ enum class Strings(
         zhCN = "- 未能读取前置小节中的速度记号（{{bpm}}）。",
         ru = "- Метка темпа ({{bpm}}) в предварительных мерах была проигнорирована.",
         fr = "- Le tempo ({{bpm}}) dans les pré-mesures a été ignorée.",
+    ),
+    ImportWarningDefaultTempoFixed(
+        en = "- Default tempo was too large ({{bpm}}), so it was fixed to 120.",
+        ja = "- デフォルトテンポが大きすぎる（{{bpm}}）ので、120に修正しました。",
+        zhCN = "- 默认速度过大（{{bpm}}），已修正为120。",
+        ru = "- Темп по умолчанию слишком большой ({{bpm}}), поэтому он был исправлен на 120.",
+        fr = "- Le tempo par défaut était trop grand ({{bpm}}), il a donc été fixé à 120.",
     ),
     ImportWarningTimeSignatureNotFound(
         en = "- No time signature labels found in the imported project.",
@@ -577,6 +631,15 @@ enum class Strings(
         en = "UtaFormatix Data Format (v$UtaFormatixDataVersion)",
         ja = "UtaFormatix データ形式（v$UtaFormatixDataVersion）",
         zhCN = "UtaFormatix 数据格式（v$UtaFormatixDataVersion）",
+        ru = "Формат данных UtaFormatix (v$UtaFormatixDataVersion)",
+        fr = "Format de données UtaFormatix (v$UtaFormatixDataVersion)",
+    ),
+    StandardMidDescription(
+        en = "Standard MIDI File",
+        ja = "標準MIDIファイル",
+        zhCN = "标准MIDI文件",
+        ru = "Стандартный MIDI-файл",
+        fr = "Fichier MIDI standard",
     ),
     ExportButton(
         en = "Export",
@@ -695,7 +758,23 @@ enum class Strings(
         zhCN = "忽略参数，使导入更快",
         ru = "Игнорировать подробные параметры для ускорения импорта",
         fr = "Ignorer les paramètres détaillés pour accélérer l'importation",
-    );
+    ),
+    UseMultipleMode(
+        en = "Batch conversion",
+        ja = "一括変換",
+        zhCN = "批量转换",
+        ru = "Пакетное преобразование",
+        fr = "Conversion par lots",
+    ),
+    UseMultipleModeDescription(
+        en = "Convert multiple files at once. Every file will be saved separately as a project.",
+        ja = "複数のファイルを一括で変換します。各ファイルはプロジェクトとして別々に保存されます。",
+        zhCN = "一次性转换多个文件。每个文件将单独保存为一个工程。",
+        ru = "Преобразовать несколько файлов одновременно. Каждый файл будет сохранен отдельно в качестве проекта.",
+        fr = "Convertir plusieurs fichiers en même temps. " +
+            "Chaque fichier sera enregistré séparément en tant que projet.",
+    ),
+    ;
 
     fun get(language: Language): String = when (language) {
         English -> en

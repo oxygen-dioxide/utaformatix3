@@ -51,17 +51,22 @@ object MusicXml {
         val partNodes = rootNode.getElementListByTagName("part")
 
         val warnings = mutableListOf<ImportWarning>()
-        val masterTrackResult = parseMasterTrack(partNodes.first(), warnings)
+        val masterTrack = partNodes.firstOrNull {
+            it.getElementListByTagName("measure").isNotEmpty()
+        } ?: throw IllegalFileException.XmlElementNotFound("measure")
+        val masterTrackResult = parseMasterTrack(masterTrack, warnings)
+        val timeSignatures = masterTrackResult.timeSignatures.ifEmpty { listOf(TimeSignature.default) }
+        val tempos = masterTrackResult.tempoWithMeasureIndexes.map { it.second }.ifEmpty { listOf(Tempo.default) }
 
         val tracks = partNodes.mapIndexed { index, element -> parseTrack(index, element, masterTrackResult) }
 
         return Project(
-            format = Format.MusicXml,
+            format = format,
             inputFiles = listOf(file),
             name = projectName,
             tracks = tracks,
-            timeSignatures = masterTrackResult.timeSignatures,
-            tempos = masterTrackResult.tempoWithMeasureIndexes.map { it.second },
+            timeSignatures = timeSignatures,
+            tempos = tempos,
             measurePrefix = 0,
             importWarnings = warnings,
         )
@@ -210,7 +215,7 @@ object MusicXml {
         for (track in projectWithTickRateApplied.tracks) {
             val content = generateTrackContent(projectWithTickRateApplied, track)
             val trackNameUrlSafe = getSafeFileName(track.name)
-            val trackFileName = "${project.name}_${track.id + 1}_$trackNameUrlSafe${Format.MusicXml.extension}"
+            val trackFileName = "${project.name}_${track.id + 1}_$trackNameUrlSafe.${format.extension}"
             zip.file(trackFileName, content)
         }
         val option = JsZipOption().also { it.type = "blob" }
@@ -546,4 +551,5 @@ object MusicXml {
 
     private const val DEFAULT_TICK_RATE_CEVIO = 2.0
     const val MUSIC_XML_VERSION = "2.0"
+    private val format = Format.MusicXml
 }
